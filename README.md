@@ -18,7 +18,7 @@ The [first implementation](https://github.com/JorgeMaker/CanSnifferSuite/tree/ma
   <img  src="https://github.com/JorgeMaker/CanSnifferSuite/blob/main/docs/EventDrivenImplementation.jpg?raw=true">
 </p>
 
-The [second implementation](https://github.com/JorgeMaker/CanSnifferSuite/tree/main/Firmware/BluePillCanSnniferFreeRTOS), tageted for STM32F40X uses FreeRTOS to acieve the desired funtionality. The characters and datagrams received by each communication interface are stored in a pair of queues that are managed by 4 tasks.
+The [second implementation](https://github.com/JorgeMaker/CanSnifferSuite/tree/main/Firmware/STM32F407VGT6CanSnniferFreeRTOS), tageted for STM32F40X uses FreeRTOS to acieve the desired funtionality. The characters and datagrams received by each communication interface are stored in a pair of queues that are managed by 4 tasks.
 
 <p align="center">
   <img  src="https://github.com/JorgeMaker/CanSnifferSuite/blob/main/docs/FreeRTOSImplementation.jpg?raw=true">
