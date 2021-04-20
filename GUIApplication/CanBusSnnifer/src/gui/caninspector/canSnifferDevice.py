@@ -32,7 +32,7 @@ class CanSnifferDevice(QtCore.QThread):
         super(CanSnifferDevice, self).__init__(*args, **kwargs)
         self._stop_event = threading.Event()
         self.serialPortName = serialPortName
-        self.bitrate = 500000
+        self.bitrate = 1115200
         self.serialPort = None
         self.isSnifing = False
         self.isConnected = False
