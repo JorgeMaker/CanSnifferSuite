@@ -47,14 +47,12 @@ The second alternative is to build custom PCB specific for this project to have 
 
 ###  GUI tool and Python lib: 
 
-An application written in using PyQt/Python  has been developed. It allows communication with the Blue Pill CAN bus dongle to send commands and receive information on the traffic that circulates on the CAN bus asctin as snnnifer and traffic generator. 
+An application written in using PyQt/Python  has been developed. It allows communication with the Blue Pill CAN bus dongle to send commands and receive information on the traffic present on the CAN bus network acting as snnnifer and traffic generator.
 
 <p align="center">
   <img  src="https://github.com/JorgeMaker/CanSnifferSuite/blob/main/docs/AnimatedScrenWideView.gif?raw=true">
 </p>
 
+The information on the traffic present on the network is parsed and sent to the application that displays it in two different formats. On the one hand, a table that lists each of the packets that have been received and, on the other, a table with the last packet received for each of the Id and the time elapsed between packets with the same ID.
+
 It is also possible to use a Python library to write scripts that interacts with the CAN bus network as is shown in [this example](https://github.com/JorgeMaker/CanSnifferSuite/blob/main/GUIApplication/CanBusSnnifer/LibraryUsageDummyExample.py) 
-
-
-
-
