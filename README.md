@@ -1,9 +1,9 @@
 <p align="center">
-  <img  src="https://github.com/JorgeMaker/CanSnniferTool/blob/main/docs/canbusdonglebanner.png?raw=true">
+  <img  src="https://github.com/JorgeMaker/CanSnifferSuite/blob/main/docs/canbusdonglebanner.png?raw=true">
 </p>
 
 
-# CanSnniferTool
+# CanSnifferSuite
 
 Blue Pill CAN bus dongle is an USB to CAN Bus 2.0A/B adapter that acts as sniffer and traffic generator. This project is composed by three independent budling blocks that can be used   in combination or separately.
 
@@ -12,30 +12,30 @@ Is an application that runs on a STM32F103C8T6 and can be deployed on the specif
 
 In this repository there are a couple of firmware. The first is for Blue Pill and is based on an interrupt driven layout design, the second in case that you prefer to use a STM32F40X family MCU uses the popular FreeRTOS for its implementation.
 
-The [first implementation](https://github.com/JorgeMaker/CanSnniferTool/tree/main/Firmware/BluePillCanSnniferEventDriven), the ISRs are responsible for receiving the basic elements of each of the two communication interfaces: the character and the datagram. Once received, they are stored in queues so that from the main function they are processed by applying a round robin algorithm.
+The [first implementation](https://github.com/JorgeMaker/CanSnifferSuite/tree/main/Firmware/BluePillCanSnniferEventDriven), the ISRs are responsible for receiving the basic elements of each of the two communication interfaces: the character and the datagram. Once received, they are stored in queues so that from the main function they are processed by applying a round robin algorithm.
 
 <p align="center">
-  <img  src="https://github.com/JorgeMaker/CanSnniferTool/blob/main/docs/EventDrivenImplementation.jpg?raw=true">
+  <img  src="https://github.com/JorgeMaker/CanSnifferSuite/blob/main/docs/EventDrivenImplementation.jpg?raw=true">
 </p>
 
-The [second implementation](https://github.com/JorgeMaker/CanSnniferTool/tree/main/Firmware/BluePillCanSnniferFreeRTOS), tageted for STM32F40X uses FreeRTOS to acieve the desired funtionality. The characters and datagrams received by each communication interface are stored in a pair of queues that are managed by 4 tasks.
+The [second implementation](https://github.com/JorgeMaker/CanSnifferSuite/tree/main/Firmware/BluePillCanSnniferFreeRTOS), tageted for STM32F40X uses FreeRTOS to acieve the desired funtionality. The characters and datagrams received by each communication interface are stored in a pair of queues that are managed by 4 tasks.
 
 <p align="center">
-  <img  src="https://github.com/JorgeMaker/CanSnniferTool/blob/main/docs/FreeRTOSImplementation.jpg?raw=true">
+  <img  src="https://github.com/JorgeMaker/CanSnifferSuite/blob/main/docs/FreeRTOSImplementation.jpg?raw=true">
 </p>
 
 Both solutions perform the same function and can be used interchangeably  with the GUI tool and Python library.
 
 ###  Hardware: 
 
-To implement the [ HW part of the project](https://github.com/JorgeMaker/CanSnniferTool/tree/main/HardWare), there are two possible alternatives with exactly the same functionality:
+To implement the [ HW part of the project](https://github.com/JorgeMaker/CanSnifferSuite/tree/main/HardWare), there are two possible alternatives with exactly the same functionality:
 
 The first and the one the easiest reachable uses the popular very Blue Pill as MCU with an USB to TTL and a CAN bus transceiver. These three elements can be purchased online on shops like AliExpress, Banagood and others. Their combined cost does not exceed € 7, constituting a very affordable solution. There is an interconnection diagram available at the HW folder with detailed instructions.
 
 The second alternative is to build custom PCB specific for this project to have a CAN bus dongle.  Geber files, BOM and schematics are provided at the HW folder. 
 
 <p align="center">
-  <img  src="https://github.com/JorgeMaker/CanSnniferTool/blob/main/docs/can_bus_dongle_picture.jpg?raw=true">
+  <img  src="https://github.com/JorgeMaker/CanSnifferSuite/blob/main/docs/can_bus_dongle_picture.jpg?raw=true">
 </p>
 
 - Developed using the popular STM32F103C8T6
@@ -50,10 +50,10 @@ The second alternative is to build custom PCB specific for this project to have 
 An application written in using PyQt/Python  has been developed. It allows communication with the Blue Pill CAN bus dongle to send commands and receive information on the traffic that circulates on the CAN bus asctin as snnnifer and traffic generator. 
 
 <p align="center">
-  <img  src="https://github.com/JorgeMaker/CanSnniferTool/blob/main/docs/AnimatedScrenWideView.gif?raw=true">
+  <img  src="https://github.com/JorgeMaker/CanSnifferSuite/blob/main/docs/AnimatedScrenWideView.gif?raw=true">
 </p>
 
-It is also possible to use a Python library to write scripts that interacts with the CAN bus network as is shown in [this example](https://github.com/JorgeMaker/CanSnniferTool/blob/main/GUIApplication/CanBusSnnifer/LibraryUsageDummyExample.py) 
+It is also possible to use a Python library to write scripts that interacts with the CAN bus network as is shown in [this example](https://github.com/JorgeMaker/CanSnifferSuite/blob/main/GUIApplication/CanBusSnnifer/LibraryUsageDummyExample.py) 
 
 
 
