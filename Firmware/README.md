@@ -8,7 +8,7 @@ An equivalent version of the project firmware is located in each folder. To comp
 
 
 <p align="center">
-  <img  src="https://github.com/JorgeMaker/CanSnniferTool/blob/main/docs/microcontrollerPinoutConfig.png?raw=true">
+  <img  src="https://github.com/JorgeMaker/CanSnifferSuite/blob/main/docs/microcontrollerPinoutConfig.png?raw=true">
 </p>
 
 
