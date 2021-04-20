@@ -1,0 +1,9 @@
+root - ERROR - QWidget(parent: QWidget = None, flags: Union[Qt.WindowFlags, Qt.WindowType] = Qt.WindowFlags()): argument 1 has unexpected type 'UserInteractionMainWindow'
+Traceback (most recent call last):
+  File "/Users/Jorge/Documents/PycharmProjects/CanBusSnnifer/NauthilusCanBusSnnifer.py", line 22, in <module>
+    userInteractionMainWindow.setupUi(mainWindow)
+  File "/Users/Jorge/Documents/PycharmProjects/CanBusSnnifer/src/gui/mainWindow.py", line 32, in setupUi
+    self.controlSnniferWidget = SnifferControlWidget(self, sniffer=self.sniffer)
+  File "/Users/Jorge/Documents/PycharmProjects/CanBusSnnifer/src/gui/caninspector/controlSniffer.py", line 15, in __init__
+    super().__init__(parent)
+TypeError: QWidget(parent: QWidget = None, flags: Union[Qt.WindowFlags, Qt.WindowType] = Qt.WindowFlags()): argument 1 has unexpected type 'UserInteractionMainWindow'
