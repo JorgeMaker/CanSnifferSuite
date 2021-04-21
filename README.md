@@ -12,13 +12,13 @@ Is an application that runs on a STM32F103C8T6 and can be deployed on the [speci
 
 In this repository there are a couple of firmware. The first is for Blue Pill and is based on an interrupt driven layout design, the second in case that you prefer to use a STM32F40X family MCU uses the popular FreeRTOS for its implementation.
 
-The [first implementation](https://github.com/JorgeMaker/CanSnifferSuite/tree/main/fm/BluePillCanSnniferEventDriven), the ISRs are responsible for receiving the basic elements of each of the two communication interfaces: the character and the datagram. Once received, they are stored in queues so that from the main function they are processed by applying a round robin algorithm.
+The [first implementation](https://github.com/JorgeMaker/CanSnifferSuite/tree/main/fw/BluePillCanSnniferEventDriven), the ISRs are responsible for receiving the basic elements of each of the two communication interfaces: the character and the datagram. Once received, they are stored in queues so that from the main function they are processed by applying a round robin algorithm.
 
 <p align="center">
   <img  src="https://github.com/JorgeMaker/CanSnifferSuite/blob/main/docs/EventDrivenImplementation.jpg?raw=true">
 </p>
 
-The [second implementation](https://github.com/JorgeMaker/CanSnifferSuite/tree/main/fm/STM32F407VGT6CanSnniferFreeRTOS), targeted for STM32F40X uses FreeRTOS to achieve the desired functionality. The characters and datagrams received by each communication interface are stored in a pair of queues that are managed by 4 tasks.
+The [second implementation](https://github.com/JorgeMaker/CanSnifferSuite/tree/main/fw/STM32F407VGT6CanSnniferFreeRTOS), targeted for STM32F40X uses FreeRTOS to achieve the desired functionality. The characters and datagrams received by each communication interface are stored in a pair of queues that are managed by 4 tasks.
 
 <p align="center">
   <img  src="https://github.com/JorgeMaker/CanSnifferSuite/blob/main/docs/FreeRTOSImplementation.jpg?raw=true">
@@ -55,4 +55,4 @@ An application written in using PyQt/Python  has been developed. It allows commu
 
 The information on the traffic present on the network is parsed and sent to the application that displays it in two different formats. On the one hand, a table that lists each of the packets that have been received and, on the other, a table with the last packet received for each of the Id and the time elapsed between packets with the same ID.
 
-It is also possible to use a Python library to write scripts that interacts with the CAN bus network as is shown in [this example](https://github.com/JorgeMaker/CanSnifferSuite/blob/main/GUIApplication/CanBusSnnifer/LibraryUsageDummyExample.py)
+It is also possible to use a Python library to write scripts that interacts with the CAN bus network as is shown in [this example](https://github.com/JorgeMaker/CanSnifferSuite/blob/main/guiApp/CanBusSnnifer/LibraryUsageDummyExample.py)
