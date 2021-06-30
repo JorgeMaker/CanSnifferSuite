@@ -229,8 +229,7 @@ void setDatagramTypeIdentifer(uint32_t ide, uint32_t rtr, uint8_t *pExitBuffer,
 	}
 	*pCursor = *pCursor + 1;
 }
-void setFormatedDatagramIdentifer(uint32_t idNum, uint8_t *pExitBuffer,
-		uint8_t *pCursor, int len) {
+void setFormatedDatagramIdentifer(uint32_t idNum, uint8_t *pExitBuffer,uint8_t *pCursor, int len) {
 
 	char *id = (char*) malloc(sizeof(char) * (len + 1));
 	int numOfDigits = 0;
@@ -245,7 +244,7 @@ void setFormatedDatagramIdentifer(uint32_t idNum, uint8_t *pExitBuffer,
 	for (int eraser = 0; eraser < (len - numOfDigits); eraser++) {
 		id[eraser] = '0';
 	}
-	strcpy((char*) pExitBuffer + *pCursor, id);
+	memcpy((char*) pExitBuffer + *pCursor, id, strlen(id)+1);
 	free(id);
 	*pCursor = *pCursor + len;
 }
@@ -293,12 +292,11 @@ uint8_t serializeDatagram(uint8_t *pExitBuffer,
 #define ZERO_BYTE '0x00'
 
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
-	if (HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rxMessageHeader,
-			rxDataReceived) == HAL_OK) {
-
+	if (HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rxMessageHeader,rxDataReceived) == HAL_OK) {
+		HAL_GPIO_TogglePin(PIN3_GPIO_Port, PIN3_Pin);
 		EncuedCANMsg msg;
 		msg.header = rxMessageHeader;
-		strcpy((char*) msg.data, (char*) rxDataReceived);
+		memcpy((char*) msg.data, (char*) rxDataReceived,rxMessageHeader.DLC);
 		q_push(&canMsgQueue, &msg);
 	} else {
 		ErrorAppHandler();
@@ -348,7 +346,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 		}
 		if (rxUARTBuff[0] == 0x00) {
 			EnueuedCommand pendingCmd;
-			strcpy((char*) pendingCmd.commnddBuff, (char*) rxCommandBuff);
+			memcpy((char*) pendingCmd.commnddBuff, (char*) rxCommandBuff, cursor);
 			pendingCmd.commandSize = cursor - 1;
 			if (!q_isFull(&commandQueue)) {
 				q_push(&commandQueue, &pendingCmd);
@@ -455,31 +453,35 @@ void processBitRateCommand() {
 
 	switch (bitRate) {
 	case 10:
-		hcan.Init.Prescaler = 300;
+		hcan.Init.Prescaler = 200;
 		idetified = true;
 		break;
 	case 20:
-		hcan.Init.Prescaler = 150;
+		hcan.Init.Prescaler = 100;
 		idetified = true;
 		break;
 	case 50:
-		hcan.Init.Prescaler = 60;
+		hcan.Init.Prescaler = 40;
 		idetified = true;
 		break;
 	case 100:
-		hcan.Init.Prescaler = 30;
+		hcan.Init.Prescaler = 20;
 		idetified = true;
 		break;
 	case 125:
-		hcan.Init.Prescaler = 24;
+		hcan.Init.Prescaler = 16;
 		idetified = true;
 		break;
 	case 250:
-		hcan.Init.Prescaler = 12;
+		hcan.Init.Prescaler = 8;
 		idetified = true;
 		break;
 	case 500:
-		hcan.Init.Prescaler = 6;
+		hcan.Init.Prescaler = 4;
+		idetified = true;
+		break;
+	case 1000:
+		hcan.Init.Prescaler = 2;
 		idetified = true;
 		break;
 	}
@@ -829,6 +831,7 @@ static void MX_GPIO_Init(void)
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOC_CLK_ENABLE();
+  __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
