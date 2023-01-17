@@ -125,6 +125,11 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef*);
 void substr(char *str, char*, int, int);
 int toInteger(uint8_t *stringToConvert, int len);
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
+void generateDummyCANTraffic(uint32_t);
+void sendCANStdDataDummyMessage(void);
+void sendCANExtDataDummyMessage(void);
+void sendCANStdRemoteDummyMessage(void);
+void sendCANExtRemoteDummyMessage(void);
 void ErrorAppHandler(void);
 /* USER CODE END PFP */
 
@@ -150,10 +155,13 @@ void blueLEDIndicator(void) {
 
 void ErrorAppHandler(void) {
 	// Display something went wrong :(
-
 	 blueLEDIndicator();
 }
-
+/**
+ * @brief  Sends a dummy message over the CAN bus using the hcan handle
+ * @param  none
+ * @retval None
+ */
 void sendCANDummyMessage(void) {
 	uint32_t TxMailbox;
 	CAN_TxHeaderTypeDef pHeader;
@@ -169,6 +177,16 @@ void sendCANDummyMessage(void) {
 		ErrorAppHandler();
 	}
 }
+/**
+ * @brief  Sends a CAN message through the CAN controller
+ * @param  dlc: data length code (number of bytes of data to be sent)
+ * @param  msgID: ID of the message to be sent
+ * @param  isRTR: flag indicating if the message is a Remote Transmission Request (RTR)
+ * @param  isStandard: flag indicating if the message ID is standard (11-bit) or extended (29-bit)
+ * @param  data: pointer to the data to be sent
+ * @retval TxMailbox: mailbox used for transmission
+ */
+
 uint32_t sendCANMessage(uint8_t dlc, uint32_t msgID, bool isRTR,
 		bool isStandard, uint8_t *data) {
 
@@ -192,6 +210,11 @@ uint32_t sendCANMessage(uint8_t dlc, uint32_t msgID, bool isRTR,
 	HAL_CAN_AddTxMessage(&hcan, &pHeader, data, &TxMailbox);
 	return TxMailbox;
 }
+/**
+ * @brief  Configures the CAN filter to accept all messages to the CAN_FIFO buffer
+ * @param  None
+ * @retval None
+ */
 void setSinfferCANFilter(void) {
 	/* Default filter - accept all to CAN_FIFO*/
 	CAN_FilterTypeDef sFilterConfig;
@@ -209,8 +232,36 @@ void setSinfferCANFilter(void) {
 	if (HAL_CAN_ConfigFilter(&hcan, &sFilterConfig) != HAL_OK) {
 		ErrorAppHandler();
 	}
-
 }
+/**
+ * setDatagramTypeIdentifier
+ *
+ * @brief sets the type identifier of a CAN (Controller Area Network) datagram
+ *
+ * This function takes in four parameters:
+ * - ide: an unsigned 32-bit integer representing the ID format of the datagram (either CAN_ID_STD for standard ID format or CAN_ID_EXT for extended ID format)
+ * - rtr: an unsigned 32-bit integer representing the type of the datagram (either CAN_RTR_DATA for data frame or CAN_RTR_REMOTE for remote frame)
+ * - pExitBuffer: a pointer to the buffer where the datagram will be stored
+ * - pCursor: a pointer to an integer representing the current position of the cursor in the buffer
+ *
+ * The function first checks the value of ide to determine whether the datagram uses a standard or extended ID format.
+ * If ide is CAN_ID_STD, the function checks the value of rtr to determine whether the datagram is a data or remote frame.
+ * If rtr is CAN_RTR_DATA, the function sets the first byte of the datagram to 't' and if rtr is CAN_RTR_REMOTE,
+ * the function sets the first byte of the datagram to 'r'.
+ *
+ * If ide is CAN_ID_EXT, the function again checks the value of rtr to determine whether the datagram is a data or remote frame.
+ * If rtr is CAN_RTR_DATA, the function sets the first byte of the datagram to 'T' and if rtr is CAN_RTR_REMOTE,
+ * the function sets the first byte of the datagram to 'R'.
+ *
+ * Finally, the function increments the cursor position by 1.
+ *
+ * @param ide - unsigned 32-bit int, representing the ID format of the datagram
+ * @param rtr - unsigned 32-bit int, representing the type of the datagram
+ * @param pExitBuffer - pointer to the buffer where the datagram will be stored
+ * @param pCursor - pointer to an integer representing the current position of the cursor in the buffer
+ *
+ * @return void
+ */
 void setDatagramTypeIdentifer(uint32_t ide, uint32_t rtr, uint8_t *pExitBuffer,
 		uint8_t *pCursor) {
 	if (ide == CAN_ID_STD) {
@@ -229,6 +280,14 @@ void setDatagramTypeIdentifer(uint32_t ide, uint32_t rtr, uint8_t *pExitBuffer,
 	}
 	*pCursor = *pCursor + 1;
 }
+/**
+* @brief  Formats a given ID number and copies it to a buffer at a specific cursor position
+* @param  idNum: the ID number to be formatted and copied
+* @param  pExitBuffer: pointer to the buffer where the formatted ID will be copied
+* @param  pCursor: pointer to the cursor position in the buffer
+* @param  len: the desired length of the formatted ID
+* @retval None
+*/
 void setFormatedDatagramIdentifer(uint32_t idNum, uint8_t *pExitBuffer,uint8_t *pCursor, int len) {
 
 	char *id = (char*) malloc(sizeof(char) * (len + 1));
@@ -248,7 +307,14 @@ void setFormatedDatagramIdentifer(uint32_t idNum, uint8_t *pExitBuffer,uint8_t *
 	free(id);
 	*pCursor = *pCursor + len;
 }
-
+/**
+* @brief  Extracts the ID of a received CAN message and formats it to a desired length, then copies it to
+*         a buffer at a specific cursor position
+* @param  receivedCANHeader: the header of the received CAN message, containing the ID of the message
+* @param  pExitBuffer: pointer to the buffer where the formatted ID will be copied
+* @param  pCursor: pointer to the cursor position in the buffer
+* @retval None
+*/
 void setDatagramIdentifer(CAN_RxHeaderTypeDef receivedCANHeader,
 		uint8_t *pExitBuffer, uint8_t *pCursor) {
 	if (receivedCANHeader.IDE == CAN_ID_EXT) {
@@ -261,18 +327,38 @@ void setDatagramIdentifer(CAN_RxHeaderTypeDef receivedCANHeader,
 
 	}
 }
+/**
+ * @brief  Formats and copies the data length code (DLC) of a received CAN message to a buffer at a specific cursor position
+ * @param  dlc: the data length code of the received message
+ * @param  pExitBuffer: pointer to the buffer where the DLC will be copied
+ * @param  pCursor: pointer to the cursor position in the buffer
+ * @retval None
+ */
 void setDLC(uint32_t dlc, uint8_t *pExitBuffer, uint8_t *pCursor) {
-	sprintf((char*) pExitBuffer + *pCursor, "%d", (int) dlc);
+    sprintf((char*) pExitBuffer + *pCursor, "%d", (int) dlc);
 	*pCursor = *pCursor + 1;
 }
-
+/**
+ * @brief  Copy data from source to destination buffer at specific cursor position
+ * @param  data: pointer to the source data
+ * @param  dlc: data length code
+ * @param  pExitBuffer: pointer to the destination buffer
+ * @param  pCursor: pointer to the cursor position in the destination buffer
+ * @retval None
+ */
 void setData(uint8_t *data, int dlc, uint8_t *pExitBuffer, uint8_t *pCursor) {
 	for (int counter = 0; counter < dlc; counter++) {
 		pExitBuffer[*pCursor + counter] = data[counter];
 	}
 	*pCursor = *pCursor + dlc;
 }
-
+/**
+ * @brief Serialize a CAN datagram and store it in a buffer
+ * @param pExitBuffer: pointer to the buffer where the serialized datagram will be stored
+ * @param receivedCANHeader: struct containing the header information of the received CAN message
+ * @param rxData: pointer to the received data payload
+ * @retval cursor: the final position of the cursor in the buffer
+ */
 uint8_t serializeDatagram(uint8_t *pExitBuffer,
 		CAN_RxHeaderTypeDef receivedCANHeader, uint8_t *rxData) {
 
@@ -291,6 +377,12 @@ uint8_t serializeDatagram(uint8_t *pExitBuffer,
 
 #define ZERO_BYTE '0x00'
 
+/**
+ * @brief Interrupt callback function for CAN RX FIFO0 message pending. For each received Messsge a new
+ *        EncuedCANMsg is created and stored in the Queue to be processed when corresponding
+ * @param hcan: pointer to the CAN handle
+ * @retval None
+ */
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
 	if (HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rxMessageHeader,rxDataReceived) == HAL_OK) {
 		HAL_GPIO_TogglePin(PIN3_GPIO_Port, PIN3_Pin);
@@ -303,7 +395,11 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
 	}
 
 }
-
+/**
+ * @brief Process a received CAN message extracted from the Queue serializing it and then
+ *        applying COBS encoding to sent it using UART
+ * @retval None
+ */
 void processCANMsg() {
 
 	uint8_t parsedDatagram[24] = { 0 };
@@ -335,7 +431,14 @@ void blinkLed() {
 	}
 	HAL_GPIO_WritePin(BLUE_LED_GPIO_Port, BLUE_LED_Pin, GPIO_PIN_SET);
 }
-
+/**
+ * @brief Interrupt callback function for UART RX Complete event. each time a new bute is recived is
+ *        processed and stored inside rxCommandBuff until the last character is received and then the
+ *        rxCommandBuff is used t create a new EnueuedCommand that is stored ant te Queue pending to
+ *        be processed.
+ * @param huart: pointer to the UART handle
+ * @retval None
+ */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 	if (huart->Instance == huart3.Instance) {
 		HAL_GPIO_TogglePin(PIN1_GPIO_Port, PIN1_Pin);
@@ -354,16 +457,29 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 			cursor = 0;
 			HAL_GPIO_TogglePin(PIN2_GPIO_Port, PIN2_Pin);
 		}
-
+		// Enable interrupt for again to be able to continue receiving data
 		HAL_UART_Receive_IT(&huart3, rxUARTBuff, 1);
 	}
 
 }
-
+/**
+ * @brief Extracts a substring from a string
+ * @param str: pointer to the original string
+ * @param sub: pointer to the substring buffer
+ * @param start: starting index of the substring
+ * @param len: length of the substring
+ * @retval None
+ */
 void substr(char *str, char *sub, int start, int len) {
 	memcpy(sub, &str[start], len);
 	sub[len] = '\0';
 }
+/**
+ * @brief Converts a string of digits to an integer
+ * @param stringToConvert: pointer to the string of digits
+ * @param len: length of the string
+ * @retval The integer value of the string
+ */
 int toInteger(uint8_t *stringToConvert, int len) {
 	int counter = len - 1;
 	int exp = 1;
@@ -375,7 +491,12 @@ int toInteger(uint8_t *stringToConvert, int len) {
 	}
 	return value;
 }
-
+/**
+ * @brief Process each Message command received from  the UART interface and
+ *        send the apropiate CAN Message.
+ * @retval None
+ * @retval None
+ */
 void processMessageComand() {
 	uint8_t cursor = 1;
 
@@ -594,13 +715,65 @@ void processComand(void) {
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 	if (htim->Instance == TIM2) {
 		miliseconds++;
-
 		if (snifferAtivityStatus == SNIFFER_STOPPED) {
 			HAL_GPIO_TogglePin(PIN4_GPIO_Port, PIN4_Pin);
 		}
-
 	}
 }
+
+void sendCANStdDataDummyMessage(void){
+	uint32_t TxMailbox;
+	CAN_TxHeaderTypeDef pHeader;
+	pHeader.DLC=8; //give message size of 1 byte
+	pHeader.IDE=CAN_ID_STD; //set identifier to standard
+	pHeader.RTR=CAN_RTR_DATA; //set data type to remote transmission request?CAN_RTR_DATA
+	pHeader.StdId=200; //define a standard identifier, used for message identification by filters (switch this for the other microcontroller)
+	uint8_t messageLoadBuffer[8] = {'S','T','D','_','D','A','T','A'};
+	HAL_CAN_AddTxMessage(&hcan, &pHeader, messageLoadBuffer, &TxMailbox);
+}
+void sendCANExtDataDummyMessage(void){
+	uint32_t TxMailbox;
+	CAN_TxHeaderTypeDef pHeader;
+	pHeader.DLC=8; //give message size of 1 byte
+	pHeader.IDE=CAN_ID_EXT; //set identifier to standard
+	pHeader.RTR=CAN_RTR_DATA; //set data type to remote transmission request?CAN_RTR_DATA
+	pHeader.ExtId=300; //define a standard identifier, used for message identification by filters (switch this for the other microcontroller)
+	uint8_t messageLoadBuffer[8] = {'E','X','T','_','D','A','T','A'};
+	//uint8_t messageLoadBuffer[8] ={42,0x4c,0x41,0x43,0x4b,0x5f,0x26,0x23};
+	HAL_CAN_AddTxMessage(&hcan, &pHeader, messageLoadBuffer, &TxMailbox);
+}
+void sendCANStdRemoteDummyMessage(void){
+	uint32_t TxMailbox;
+	CAN_TxHeaderTypeDef pHeader;
+	pHeader.DLC=2; //give message size of 1 byte
+	pHeader.IDE=CAN_ID_STD; //set identifier to standard
+	pHeader.RTR=CAN_RTR_REMOTE; //set data type to remote transmission request?CAN_RTR_DATA
+	pHeader.StdId=400; //define a standard identifier, used for message identification by filters (switch this for the other microcontroller)
+
+	HAL_CAN_AddTxMessage(&hcan, &pHeader, NULL, &TxMailbox);
+}
+void sendCANExtRemoteDummyMessage(void){
+	uint32_t TxMailbox;
+	CAN_TxHeaderTypeDef pHeader;
+	pHeader.DLC=5; //give message size of 1 byte
+	pHeader.IDE=CAN_ID_EXT; //set identifier to standard
+	pHeader.RTR=CAN_RTR_REMOTE; //set data type to remote transmission request?CAN_RTR_DATA
+	pHeader.ExtId=500; //define a standard identifier, used for message identification by filters (switch this for the other microcontroller)
+
+	HAL_CAN_AddTxMessage(&hcan, &pHeader, NULL, &TxMailbox);
+}
+
+void generateDummyCANTraffic(uint32_t delay){
+	sendCANStdDataDummyMessage();
+	HAL_Delay(delay);
+	sendCANExtDataDummyMessage();
+	HAL_Delay(delay);
+	sendCANStdRemoteDummyMessage();
+	HAL_Delay(delay);
+	sendCANExtRemoteDummyMessage();
+	HAL_Delay(delay);
+}
+
 
 /* USER CODE END 0 */
 
@@ -636,14 +809,18 @@ int main(void)
   MX_USART3_UART_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
+	// Enable interrupt for to be able to receiving data via UART
 	HAL_UART_Receive_IT(&huart3, rxUARTBuff, 1);
+	// Set CAN Filter to receive all messages
 	setSinfferCANFilter();
 	HAL_CAN_Start(&hcan);
 	if (snifferAtivityStatus != SNIFFER_STOPPED) {
 		HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING);
 	}
+	// Initialize EncuedCANMsg
 	q_init(&canMsgQueue, sizeof(EncuedCANMsg), CAN_MSSG_QUEUE_SIZE,
 			IMPLEMENTATION, false);
+	// Initialize EnueuedCommand
 	q_init(&commandQueue, sizeof(EnueuedCommand), CMD_QUEUE_SIZE,
 			IMPLEMENTATION, true);
 	// Displays we are starting the main loop
@@ -657,6 +834,10 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+
+		// Use this function to make it a a dummy traffic generator
+		//generateDummyCANTraffic(10);
+
 		if (q_pop(&commandQueue, &decuedComand)) {
 			processComand();
 		}
@@ -831,7 +1012,6 @@ static void MX_GPIO_Init(void)
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOC_CLK_ENABLE();
-  __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
