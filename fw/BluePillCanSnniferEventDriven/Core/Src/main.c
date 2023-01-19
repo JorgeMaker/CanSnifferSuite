@@ -102,7 +102,6 @@ static void MX_TIM2_Init(void);
 int __io_putchar(int);
 void blueLEDIndicator(void);
 void blinkLed();
-void setSinfferCANFilter(void);
 void processCANMsg(void);
 void processComand(void);
 void processBitRateCommand();
@@ -112,7 +111,10 @@ void processRebootCommand(void);
 void processActivitySniferComand();
 void sendCANMDummyessage(void);
 uint32_t sendCANMessage(uint8_t, uint32_t, bool, bool, uint8_t*);
-void setSinfferCANFilter(void);
+void setCANFilterAcceptAll(void);
+void setCANFilterAcceptSingleExtendedID(uint32_t);
+void setCANFilterAcceptSingleStandardID(uint16_t);
+void setSinfferCANFilterAcceptRange(uint8_t, uint32_t);
 void setDatagramTypeIdentifer(uint32_t, uint32_t, uint8_t*, uint8_t*);
 void setFormatedDatagramIdentifer(uint32_t, uint8_t*, uint8_t*, int);
 void setDatagramIdentifer(CAN_RxHeaderTypeDef, uint8_t*, uint8_t*);
@@ -215,16 +217,15 @@ uint32_t sendCANMessage(uint8_t dlc, uint32_t msgID, bool isRTR,
  * @param  None
  * @retval None
  */
-void setSinfferCANFilter(void) {
+void setCANFilterAcceptAll(void) {
 	/* Default filter - accept all to CAN_FIFO*/
 	CAN_FilterTypeDef sFilterConfig;
 	sFilterConfig.FilterBank = 0;
-	sFilterConfig.FilterIdHigh = 0x00005;
+	//sFilterConfig.FilterIdHigh = 0x00005;
 	sFilterConfig.FilterBank = 0x0000;
 	sFilterConfig.FilterMode = CAN_FILTERMODE_IDMASK;
 	sFilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
-	sFilterConfig.FilterIdHigh = 0x200 << 5;  //11-bit ID, in top bits
-	sFilterConfig.FilterIdLow = 0x0000;
+	// Set Mask to all 0s to allow pass any messageID
 	sFilterConfig.FilterMaskIdHigh = 0x0000;
 	sFilterConfig.FilterMaskIdLow = 0x0000;
 	sFilterConfig.FilterFIFOAssignment = CAN_FILTER_FIFO0;
@@ -233,6 +234,49 @@ void setSinfferCANFilter(void) {
 		ErrorAppHandler();
 	}
 }
+
+
+void setCANFilterAcceptSingleStandardID(uint16_t acceptedID){
+	/* Default filter - accept all to CAN_FIFO*/
+	CAN_FilterTypeDef sFilterConfig;
+	sFilterConfig.FilterBank = 0;
+	sFilterConfig.FilterBank = 0x0000;
+	sFilterConfig.FilterMode = CAN_FILTERMODE_IDMASK;
+	sFilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
+	sFilterConfig.FilterIdHigh = acceptedID << 5; //11-bit ID, in top bits 6= 16-11 bits
+	sFilterConfig.FilterIdLow = 0x0000;
+	sFilterConfig.FilterMaskIdHigh = 0x7FF << 5;
+	sFilterConfig.FilterMaskIdLow = 0x0000;
+	sFilterConfig.FilterFIFOAssignment = CAN_FILTER_FIFO0;
+	sFilterConfig.FilterActivation = ENABLE;
+	if (HAL_CAN_ConfigFilter(&hcan, &sFilterConfig) != HAL_OK) {
+		ErrorAppHandler();
+	}
+}
+
+
+
+
+void setCANFilterAcceptSingleExtendedID(uint32_t acceptedID){
+	uint16_t low16bits = acceptedID & 0xFFFF;
+	uint16_t high16Bits = (acceptedID >> 16) & 0xFFFF;
+    /* Default filter - accept all to CAN_FIFO*/
+	CAN_FilterTypeDef sFilterConfig;
+	sFilterConfig.FilterBank = 0;
+	sFilterConfig.FilterBank = 0x0000;
+	sFilterConfig.FilterMode = CAN_FILTERMODE_IDMASK;
+	sFilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
+	sFilterConfig.FilterIdHigh = high16Bits;
+	sFilterConfig.FilterIdLow = low16bits << 3; //11-bit ID, in top bits 3=(32-29)
+	sFilterConfig.FilterMaskIdHigh = 0xFFFF;
+	sFilterConfig.FilterMaskIdLow = 0xFFF8;
+	sFilterConfig.FilterFIFOAssignment = CAN_FILTER_FIFO0;
+	sFilterConfig.FilterActivation = ENABLE;
+	if (HAL_CAN_ConfigFilter(&hcan, &sFilterConfig) != HAL_OK) {
+		ErrorAppHandler();
+	}
+}
+
 /**
  * setDatagramTypeIdentifier
  *
@@ -613,7 +657,7 @@ void processBitRateCommand() {
 		if (HAL_CAN_Init(&hcan) != HAL_OK) {
 			ErrorAppHandler();
 		}
-		setSinfferCANFilter();
+		setCANFilterAcceptAll();
 		if (HAL_CAN_Start(&hcan) != HAL_OK) {
 			ErrorAppHandler();
 		}
@@ -651,7 +695,7 @@ void processLoopBackModeCommand() {
 		if (HAL_CAN_Init(&hcan) != HAL_OK) {
 			ErrorAppHandler();
 		}
-		setSinfferCANFilter();
+		setCANFilterAcceptAll();
 		if (HAL_CAN_Start(&hcan) != HAL_OK) {
 			ErrorAppHandler();
 		}
@@ -812,7 +856,7 @@ int main(void)
 	// Enable interrupt for to be able to receiving data via UART
 	HAL_UART_Receive_IT(&huart3, rxUARTBuff, 1);
 	// Set CAN Filter to receive all messages
-	setSinfferCANFilter();
+	setCANFilterAcceptAll();
 	HAL_CAN_Start(&hcan);
 	if (snifferAtivityStatus != SNIFFER_STOPPED) {
 		HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING);
