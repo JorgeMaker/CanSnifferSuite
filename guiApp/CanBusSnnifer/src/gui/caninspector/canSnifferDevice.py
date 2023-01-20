@@ -142,3 +142,28 @@ class CanSnifferDevice(QtCore.QThread):
         commandValue = commandSrt.encode()
         valueToSend = cobs.encode(commandValue)
         self.serialPort.write(valueToSend + b'\00')
+    
+    def sendFilterCommand(self, bank, type, messageID):
+        commandValue = "F".encode()
+        if type in ("S", "E"):
+            commandValue = commandValue + type.encode()
+        else:
+            raise Exception('Invalid type [{}] arguments only '
+                            'E o S accepted'.format(type))
+        if bank in range(13):
+            commandValue = commandValue + str(bank).zfill(2).encode()
+        else:
+            raise Exception('Invalid bank [{}] argument only '
+                            'between 0 and 13 is accepted'.format(type))
+        if type is "S" and messageID <= 2**11:
+            commandValue = commandValue + str(messageID).zfill(4).encode()
+        else:
+            raise Exception('Invalid messageID {}] argument only '
+                            'lower than 2^11 accepted'.format(messageID))
+        if type is "E" and messageID <= 2**29:
+            commandValue = commandValue + str(messageID).zfill(9).encode()
+        else:
+            raise Exception('Invalid bank [{}] argument only '
+                            'lower than 2^29 accepted'.format(messageID))
+        valueToSend = cobs.encode(commandValue)
+        self.serialPort.write(valueToSend + b'\00')
