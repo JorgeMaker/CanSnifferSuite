@@ -1,4 +1,5 @@
-import logging
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 import threading
 
 import serial
@@ -11,7 +12,9 @@ from src.gui.caninspector.canDatagram import CANDatagram
 
 
 class CanSnifferDevice(QtCore.QThread):
-    canBusBitRates = {'250.000': "12",
+
+    canBusBitRates = {'250.000': "250",
+                      '1000.000': "1000",
                       '500.000': "500",
                       '125.000': "125",
                       '100.000': "100",
@@ -32,7 +35,7 @@ class CanSnifferDevice(QtCore.QThread):
         super(CanSnifferDevice, self).__init__(*args, **kwargs)
         self._stop_event = threading.Event()
         self.serialPortName = serialPortName
-        self.bitrate = 1115200
+        self.bitrate = 115200
         self.serialPort = None
         self.isSnifing = False
         self.isConnected = False
@@ -132,5 +135,10 @@ class CanSnifferDevice(QtCore.QThread):
 
     def rebootDevice(self):
         commandValue = "R".encode()
+        valueToSend = cobs.encode(commandValue)
+        self.serialPort.write(valueToSend + b'\00')
+
+    def sendRawCommand(self, commandSrt):
+        commandValue = commandSrt.encode()
         valueToSend = cobs.encode(commandValue)
         self.serialPort.write(valueToSend + b'\00')
