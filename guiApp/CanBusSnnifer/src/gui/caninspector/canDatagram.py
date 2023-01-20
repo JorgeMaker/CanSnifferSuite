@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+import struct
 
 class CANDatagram:
     def __init__(self, textValue=None):
@@ -108,6 +111,16 @@ class CANDatagram:
                 stringRepresentation = stringRepresentation + "  " + byeString
             return stringRepresentation
 
+        elif displayFlag == "DEC":
+            stringRepresentation = str(int.from_bytes(self.data, byteorder="little"))
+            return stringRepresentation
+        elif displayFlag == "FLOAT":
+            if len(self.data) is 4:
+                unpacked = struct.unpack('f', self.data)
+                stringRepresentation = str(round(unpacked[0], 4))
+                return stringRepresentation
+            else:
+                return "-Is not a Float-"
     def getDatagramTypeCode(self):
         if self.extended:
             if self.rtr:
@@ -140,7 +153,8 @@ class CANDatagram:
                 serializedvalue = serializedvalue + 't'.encode()
                 serializedvalue = serializedvalue + self.getSerializedID()
             serializedvalue = serializedvalue + str(self.dlc).encode()
-            serializedvalue = serializedvalue + self.data
+            if self.data != None:
+                serializedvalue = serializedvalue + self.data
 
         return serializedvalue
 
