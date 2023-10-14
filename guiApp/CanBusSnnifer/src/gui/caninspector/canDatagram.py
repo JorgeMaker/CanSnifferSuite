@@ -163,3 +163,9 @@ class CANDatagram:
             return str(self.messageID).zfill(9).encode()
         else:
             return str(self.messageID).zfill(4).encode()
+
+    def setDataFomBytes(self, bytesEnumerate):
+        data = bytearray()
+        for byteValue in bytesEnumerate:
+            data = data + bytearray.fromhex(byteValue)
+        self.data = data
