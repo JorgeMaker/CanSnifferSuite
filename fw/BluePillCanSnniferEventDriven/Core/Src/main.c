@@ -30,8 +30,11 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
+
+#define SIZE_RX 30
+
 typedef struct qCmd {
-	uint8_t commnddBuff[20];
+	uint8_t commnddBuff[SIZE_RX];
 	uint8_t commandSize;
 } EnueuedCommand;
 
@@ -70,12 +73,10 @@ CAN_RxHeaderTypeDef rxMessageHeader;
 uint8_t rxDataReceived[8];
 
 // UART Callback variables
-#define SIZE_RX 20
-
 uint8_t rxUARTBuff[1] = { 0 };
 uint8_t rxCommandBuff[SIZE_RX] = { 0 };
 volatile uint8_t cursor = 0;
-uint8_t decodedCommand[20] = { 0 };
+uint8_t decodedCommand[SIZE_RX] = { 0 };
 
 #define CMD_QUEUE_SIZE 100
 Queue_t commandQueue;
@@ -112,8 +113,8 @@ void processActivitySniferComand();
 void sendCANMDummyessage(void);
 uint32_t sendCANMessage(uint8_t, uint32_t, bool, bool, uint8_t*);
 void setCANFilterAcceptAll(void);
-void setCANFilterAcceptSingleExtendedID(uint32_t);
-void setCANFilterAcceptSingleStandardID(uint16_t);
+void setCANFilterAcceptSingleExtendedID(uint32_t, uint32_t);
+void setCANFilterAcceptSingleStandardID(uint32_t,uint16_t);
 void setSinfferCANFilterAcceptRange(uint8_t, uint32_t);
 void setDatagramTypeIdentifer(uint32_t, uint32_t, uint8_t*, uint8_t*);
 void setFormatedDatagramIdentifer(uint32_t, uint8_t*, uint8_t*, int);
@@ -236,11 +237,11 @@ void setCANFilterAcceptAll(void) {
 }
 
 
-void setCANFilterAcceptSingleStandardID(uint16_t acceptedID){
+void setCANFilterAcceptSingleStandardID(uint32_t filterBank, uint16_t acceptedID){
 	/* Default filter - accept all to CAN_FIFO*/
 	CAN_FilterTypeDef sFilterConfig;
 	sFilterConfig.FilterBank = 0;
-	sFilterConfig.FilterBank = 0x0000;
+	sFilterConfig.FilterBank = filterBank;
 	sFilterConfig.FilterMode = CAN_FILTERMODE_IDMASK;
 	sFilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
 	sFilterConfig.FilterIdHigh = acceptedID << 5; //11-bit ID, in top bits 6= 16-11 bits
@@ -257,13 +258,13 @@ void setCANFilterAcceptSingleStandardID(uint16_t acceptedID){
 
 
 
-void setCANFilterAcceptSingleExtendedID(uint32_t acceptedID){
+void setCANFilterAcceptSingleExtendedID(uint32_t filterBank, uint32_t acceptedID){
 	uint16_t low16bits = acceptedID & 0xFFFF;
 	uint16_t high16Bits = (acceptedID >> 16) & 0xFFFF;
     /* Default filter - accept all to CAN_FIFO*/
 	CAN_FilterTypeDef sFilterConfig;
 	sFilterConfig.FilterBank = 0;
-	sFilterConfig.FilterBank = 0x0000;
+	sFilterConfig.FilterBank = filterBank;
 	sFilterConfig.FilterMode = CAN_FILTERMODE_IDMASK;
 	sFilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
 	sFilterConfig.FilterIdHigh = high16Bits;
@@ -407,7 +408,6 @@ uint8_t serializeDatagram(uint8_t *pExitBuffer,
 		CAN_RxHeaderTypeDef receivedCANHeader, uint8_t *rxData) {
 
 	uint8_t cursor = 0;
-
 	setDatagramTypeIdentifer(receivedCANHeader.IDE, receivedCANHeader.RTR,
 			pExitBuffer, &cursor);
 	setDatagramIdentifer(receivedCANHeader, pExitBuffer, &cursor);
@@ -609,7 +609,6 @@ void processMessageComand() {
 }
 
 void processBitRateCommand() {
-
 	uint8_t bitrateSrt[3];
 	substr((char*) decodedCommand, (char*) bitrateSrt, 1, 3);
 	int bitRate = toInteger(bitrateSrt, 3);
@@ -671,7 +670,6 @@ void processBitRateCommand() {
 }
 
 void processLoopBackModeCommand() {
-
 	uint8_t mode[2];
 	bool idetified = false;
 	substr((char*) decodedCommand, (char*) mode, 1, 2);
@@ -709,7 +707,6 @@ void processLoopBackModeCommand() {
 }
 
 void processActivitySniferComand() {
-
 	uint8_t activityMode[2];
 	substr((char*) decodedCommand, (char*) activityMode, 1, 3);
 	if (!strcmp((char*) activityMode, "ON_")) {
@@ -725,6 +722,39 @@ void processActivitySniferComand() {
 		}
 	}
 }
+void processFilterCommand(){
+	uint8_t  cursor = 1;
+	uint8_t  idType[1];
+	uint8_t  filterBankStr[2];
+	substr((char*) decodedCommand, (char*) idType, cursor, 1);
+	// We have a filter for Standard IDs
+	if (!strcmp((char*) idType, "S")) {
+		cursor += 1;
+		substr((char*) decodedCommand, (char*) filterBankStr, cursor, 2);
+		cursor += 2;
+		int filterBank = toInteger(filterBankStr, 2);
+		uint8_t messageID_str[4];
+		substr((char*) decodedCommand, (char*) messageID_str, cursor, 4);
+		int msgID = toInteger(messageID_str, 4);
+		setCANFilterAcceptSingleStandardID(filterBank, msgID);
+
+	}
+	// We have a filter for Extended IDs
+	else if (!strcmp((char*) idType, "E")) {
+		cursor += 1;
+		substr((char*) decodedCommand, (char*) filterBankStr, cursor, 2);
+		int filterBank = toInteger(filterBankStr, 2);
+		cursor += 2;
+		uint8_t messageID_str[9];
+		substr((char*) decodedCommand, (char*) messageID_str, cursor, 9);
+		int msgID = toInteger(messageID_str, 9);
+		setCANFilterAcceptSingleExtendedID(filterBank, msgID);
+	}
+	else {
+		return;
+	}
+}
+
 
 void processRebootCommand() {
 	NVIC_SystemReset();
@@ -751,6 +781,9 @@ void processComand(void) {
 			// Change Mode
 			processLoopBackModeCommand();
 		}	// Reboot Snifer
+		else if (decodedCommand[0] == 'F') {
+			processFilterCommand();
+		}
 		else if (decodedCommand[0] == 'R') {
 			processRebootCommand();
 		}
@@ -766,45 +799,20 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 }
 
 void sendCANStdDataDummyMessage(void){
-	uint32_t TxMailbox;
-	CAN_TxHeaderTypeDef pHeader;
-	pHeader.DLC=8; //give message size of 1 byte
-	pHeader.IDE=CAN_ID_STD; //set identifier to standard
-	pHeader.RTR=CAN_RTR_DATA; //set data type to remote transmission request?CAN_RTR_DATA
-	pHeader.StdId=200; //define a standard identifier, used for message identification by filters (switch this for the other microcontroller)
 	uint8_t messageLoadBuffer[8] = {'S','T','D','_','D','A','T','A'};
-	HAL_CAN_AddTxMessage(&hcan, &pHeader, messageLoadBuffer, &TxMailbox);
+	sendCANMessage(8, 200, false,true, messageLoadBuffer);
 }
 void sendCANExtDataDummyMessage(void){
-	uint32_t TxMailbox;
-	CAN_TxHeaderTypeDef pHeader;
-	pHeader.DLC=8; //give message size of 1 byte
-	pHeader.IDE=CAN_ID_EXT; //set identifier to standard
-	pHeader.RTR=CAN_RTR_DATA; //set data type to remote transmission request?CAN_RTR_DATA
-	pHeader.ExtId=300; //define a standard identifier, used for message identification by filters (switch this for the other microcontroller)
 	uint8_t messageLoadBuffer[8] = {'E','X','T','_','D','A','T','A'};
 	//uint8_t messageLoadBuffer[8] ={42,0x4c,0x41,0x43,0x4b,0x5f,0x26,0x23};
-	HAL_CAN_AddTxMessage(&hcan, &pHeader, messageLoadBuffer, &TxMailbox);
+	sendCANMessage(8,300, false,false, messageLoadBuffer);
 }
 void sendCANStdRemoteDummyMessage(void){
-	uint32_t TxMailbox;
-	CAN_TxHeaderTypeDef pHeader;
-	pHeader.DLC=2; //give message size of 1 byte
-	pHeader.IDE=CAN_ID_STD; //set identifier to standard
-	pHeader.RTR=CAN_RTR_REMOTE; //set data type to remote transmission request?CAN_RTR_DATA
-	pHeader.StdId=400; //define a standard identifier, used for message identification by filters (switch this for the other microcontroller)
+	sendCANMessage(0,400, true,true, NULL);
 
-	HAL_CAN_AddTxMessage(&hcan, &pHeader, NULL, &TxMailbox);
 }
 void sendCANExtRemoteDummyMessage(void){
-	uint32_t TxMailbox;
-	CAN_TxHeaderTypeDef pHeader;
-	pHeader.DLC=5; //give message size of 1 byte
-	pHeader.IDE=CAN_ID_EXT; //set identifier to standard
-	pHeader.RTR=CAN_RTR_REMOTE; //set data type to remote transmission request?CAN_RTR_DATA
-	pHeader.ExtId=500; //define a standard identifier, used for message identification by filters (switch this for the other microcontroller)
-
-	HAL_CAN_AddTxMessage(&hcan, &pHeader, NULL, &TxMailbox);
+	sendCANMessage(0,500, true,false, NULL);
 }
 
 void generateDummyCANTraffic(uint32_t delay){
@@ -1056,6 +1064,7 @@ static void MX_GPIO_Init(void)
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOC_CLK_ENABLE();
+  __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
